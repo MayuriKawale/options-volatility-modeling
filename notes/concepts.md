@@ -103,3 +103,19 @@
 - More participants = tighter spreads = more reliable prices
 - Hierarchy: Monthly > Weekly > Quarterly > LEAPS in terms of 
   day-to-day liquidity
+
+## 9. Options Chain Structure
+
+Key columns in an options chain:
+- **strike:** The price at which the option can be exercised
+- **bid/ask:** Current market quotes — we use mid price (average of both)
+- **lastPrice:** Avoid using — may be stale from hours or days ago
+- **volume:** Contracts traded today — liquidity indicator
+- **openInterest:** Total outstanding contracts — stronger liquidity indicator
+- **impliedVolatility:** Market's expectation of future volatility
+
+### Why Mid Price Instead of Last Price?
+- Last price could be from hours or days ago when market conditions 
+  were different
+- Bid and ask are live quotes reflecting current market
+- Mid price = (bid + ask) / 2 gives the fairest current estimate
