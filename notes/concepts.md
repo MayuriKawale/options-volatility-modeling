@@ -89,3 +89,17 @@
 - SABR RMSE: computed using calibrated SABR implied volatilities for all strikes
 - Expected result: SABR should have significantly lower RMSE than BS, 
   demonstrating its superior fit to the volatility smile.
+
+## 8. Options Expiry and Liquidity
+
+### DTE (Days to Expiry)
+- Too short (< 30 days): gamma dominated, noisy implied vols
+- Too long (> 60 days): low liquidity, wide bid-ask spreads
+- Sweet spot: 30-60 days for clean, reliable data
+
+### Why Monthly Expiries Have High Liquidity
+- Monthly options expire on the third Friday of each month
+- Institutional hedging is structured around monthly cycles
+- More participants = tighter spreads = more reliable prices
+- Hierarchy: Monthly > Weekly > Quarterly > LEAPS in terms of 
+  day-to-day liquidity
