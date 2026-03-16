@@ -108,14 +108,39 @@
 
 Key columns in an options chain:
 - **strike:** The price at which the option can be exercised
-- **bid/ask:** Current market quotes — we use mid price (average of both)
-- **lastPrice:** Avoid using — may be stale from hours or days ago
-- **volume:** Contracts traded today — liquidity indicator
-- **openInterest:** Total outstanding contracts — stronger liquidity indicator
+- **bid/ask:** Current market quotes, we use mid price (average of both)
+- **lastPrice:** Avoid using this, may be stale from hours or days ago
+- **volume:** Contracts traded today; liquidity indicator
+- **openInterest:** Total outstanding contracts; stronger liquidity indicator
 - **impliedVolatility:** Market's expectation of future volatility
+
+## 10. Why Liquidity Matters for Options Data
+
+- Liquid options have tight bid-ask spreads (e.g., $0.02)
+- Illiquid options have wide spreads (e.g., $0.50)
+- We use mid price = (bid + ask) / 2 as our market price
+- Wide spread → unreliable mid price → corrupted implied vol
+- SPY is ideal because it is the most liquid options market in the world
+- Rule of thumb: always use the most liquid instrument available 
+  for volatility analysis
 
 ### Why Mid Price Instead of Last Price?
 - Last price could be from hours or days ago when market conditions 
   were different
 - Bid and ask are live quotes reflecting current market
 - Mid price = (bid + ask) / 2 gives the fairest current estimate
+
+## 11. Put-Call Parity
+- Call prices decrease as strike increases
+- Put prices increase as strike increases  
+- The two curves cross at the current stock price
+- This is put-call parity: a fundamental no-arbitrage relationship
+- If this relationship is violated in real data, something is wrong
+
+## 12. Fear Asymmetry in Options Markets
+- Open interest in SPY is heavily concentrated in downside puts
+- Institutional investors buy puts as portfolio insurance (hedging)
+- This is called the "fear trade" or "tail risk hedging"
+- Markets price downside risk much higher than upside risk
+- This creates the volatility skew; higher implied vol for lower strikes
+- Black-Scholes cannot capture this with constant volatility assumption
