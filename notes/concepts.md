@@ -366,3 +366,131 @@ F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
 ### Key insight:
 - backbone × skew × time = SABR implied vol
 - Each component has a clear financial interpretation
+
+## 23. Why Beta is Fixed in SABR Calibration
+
+### What each parameter controls:
+- Alpha → overall vol level (shift entire smile up/down)
+- Rho → skew (tilt smile left or right)
+- Nu → curvature (how pronounced the smile shape is)
+- Beta → backbone (how vol scales with price level over time)
+
+### Why Beta can't be calibrated from a single options snapshot:
+- Beta affects how vol evolves as price changes over time
+- Identifying Beta requires time series data across multiple price levels
+- From a single day's options chain, Beta and Alpha are statistically indistinguishable i.e. many combinations give same smile
+- This is called an ill-posed optimization problem
+
+### Industry convention for Beta:
+- Beta = 1 → lognormal backbone (equity indices, FX)
+- Beta = 0 → normal backbone (interest rates, can go negative)
+- Beta = 0.5 → square root process (common default compromise)
+- We use Beta = 0.5 for SPY as standard practice
+
+### Analogy:
+- Like fixing a hyperparameter in ML when it is correlated with 
+  another parameter, prevents unstable optimization
+- Fix Beta based on domain knowledge, calibrate the rest
+
+## 24. L-BFGS-B Optimization Algorithm
+
+### Problem: minimize loss function over (alpha, rho, nu)
+
+### Why not basic gradient descent?
+- Only uses slope (first derivative)
+- Slow and doesn't know about curvature
+- Takes many small steps
+
+### Newton's method:
+- Uses curvature (second derivative / Hessian)
+- Much faster and takes smarter larger steps
+- Problem: computing full Hessian is expensive (N² calculations)
+
+### BFGS:
+- Approximates the Hessian instead of computing it exactly
+- Updates approximation at each step using gradient history
+- Gets most benefit of Newton's method at fraction of cost
+
+### L-BFGS (Limited memory):
+- Only stores last m gradient updates (typically m=10)
+- Memory efficient for large problems
+- For our 3 parameter problem efficiency doesn't matter much
+- But good standard practice
+
+### The B - Bounds:
+- Most important feature for SABR calibration
+- Constrains parameters to valid ranges:
+  - alpha > 0 (vol can't be negative)
+  - -1 < rho < 1 (correlation bounds)
+  - nu > 0 (vol of vol can't be negative)
+- Prevents optimizer exploring meaningless parameter space
+
+### Analogy to ML:
+- Same mathematical idea as training ML models
+- Loss function → minimize prediction error
+- Gradient → direction of improvement
+- L-BFGS-B → smart optimizer that respects constraints
+
+## 25. SABR Calibration Challenges
+
+### Why SABR struggles with steep equity skews:
+- SABR produces relatively symmetric smiles
+- Real equity skews are highly asymmetric (steep left, flat right)
+- Fitting both extremes forces unrealistic parameter values
+- Parameters hit optimization bounds, called boundary convergence
+
+### Industry standard solution:
+- Calibrate to near-ATM region only (typically ±5% to ±10%)
+- Deep OTM options are less liquid and less reliable anyway
+- Near-ATM region is where SABR fits best
+- Produces economically meaningful parameters
+
+### Signs of a bad calibration:
+- Parameters hitting upper or lower bounds
+- Alpha > 1.0 (unrealistically high vol level)
+- Nu > 2.0 (unrealistically high vol of vol)
+- Loss not improving significantly between attempts
+
+## 27. SABR Alpha Initialization
+
+### Common mistake:
+- Setting alpha ≈ ATM implied vol (e.g. 0.20)
+- This produces SABR vols much lower than market
+
+### Why this happens:
+- With beta < 1, ATM SABR vol = alpha / F^(1-beta)
+- For beta=0.5 and F=670: sigma_ATM = alpha / sqrt(670) = alpha / 25.89
+- alpha=0.20 → sigma_ATM = 0.20/25.89 = 0.0077 (0.77%), this is way too low
+
+### Correct initialization:
+- Invert ATM formula: alpha = ATM_vol × F^(1-beta)
+- For beta=0.5: alpha = ATM_vol × sqrt(F)
+- Example: alpha = 0.20 × sqrt(670.39) = 5.178
+
+### General rule:
+- Always initialize alpha = ATM_market_vol × F^(1-beta)
+- This ensures SABR starts at the correct vol level
+- Prevents boundary convergence from wrong initialization
+
+## 28. SABR Model Limitations
+
+### Fundamental limitation:
+- SABR produces a relatively symmetric smile shape
+- Real equity skews are highly asymmetric:
+  - Left side (downside): very steep → fear driven
+  - Right side (upside): flat → no fear premium
+- Single parameter set cannot fit both sides perfectly
+
+### Where SABR works best:
+- Near ATM region (±10% around forward price)
+- Interest rate markets (more symmetric smiles)
+- FX markets (more symmetric smiles)
+
+### Where SABR struggles:
+- Deep OTM equity puts (very steep left tail)
+- Right side of equity smile (flat upside)
+
+### Practical implication:
+- Use SABR for ATM hedging and interpolation
+- Be cautious extrapolating to deep OTM strikes
+- Extensions like SABR-LV (Local-Stochastic Vol) address this
