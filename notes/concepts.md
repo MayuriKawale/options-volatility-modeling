@@ -304,3 +304,65 @@ In practice small violations occur because:
 
 Result: calls and puts give slightly different implied vols 
 for the same strike, this is normal and expected
+
+## 21. Forward Price vs Spot Price
+
+### Spot Price:
+- Current market price of the asset right now
+- SPY spot price = $669.03
+
+### Forward Price:
+- Agreed price today for buying/selling asset at a future date
+- Accounts for interest rates and dividends
+- Formula: F = S × e^((r - q) × T)
+  - S = spot price
+  - r = risk-free rate
+  - q = dividend yield
+  - T = time to expiry in years
+
+### Why forward price is higher than spot:
+- You earn interest by keeping cash instead of buying now
+- Seller needs compensation for this → forward price > spot
+
+### Why dividends reduce forward price:
+- Forward contract holder misses out on dividends
+- This reduces the forward price relative to spot
+
+### Why SABR uses forward price:
+- Forward price is a martingale under the forward measure
+- Makes stochastic calculus cleaner
+- Interest rates and dividends already baked in
+- No need to handle them separately inside the formula
+
+### Example for our project:
+F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
+
+## 22. Hagan SABR Formula Structure
+
+### Two cases:
+1. ATM (F ≈ K): simplified formula, avoids log(F/K) = 0 issue
+2. Non-ATM: full formula with three multiplied components
+
+### ATM formula:
+- term1 = alpha / F^(1-beta) → base vol level (backbone)
+- term2 = 1 + (...) * T → time correction for beta, rho, nu effects
+- result = term1 * term2
+
+### Non-ATM formula has three components multiplied:
+1. numerator/denominator → backbone term (base vol level)
+  - FK_mid = (F×K)^((1-β)/2) → geometric midpoint
+  - log_FK = log(F/K) → log moneyness
+  - denominator corrections → Taylor expansion for accuracy
+
+2. z/x(z) → skew term (generates the smile/skew shape)
+  - z = (nu/alpha) × FK_mid × log_FK
+  - x(z) = log(...) accounts for correlation effects
+  - rho < 0 → downward skew (equity markets)
+
+3. correction → time term (vol accumulates over time)
+  - Same structure as ATM term2
+  - Effects of beta, rho, nu grow with T
+
+### Key insight:
+- backbone × skew × time = SABR implied vol
+- Each component has a clear financial interpretation
