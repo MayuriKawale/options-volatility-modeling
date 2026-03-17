@@ -515,3 +515,10 @@ F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
 - SABR stochastic vol captures market behavior much better
 - For production use, further refinements (SABR-LV) would 
   improve the right side fit, but even basic SABR is a huge improvement over BS.
+
+## 30. Best Practices for Live Data
+- Always save raw data to CSV immediately after fetching
+- Never assume you can re-fetch the same data later
+- Financial data changes daily - options prices, bid/ask quotes
+- yfinance returns current market data only, not historical options data
+- Rule: fetch → save → analyze, never fetch → analyze → save
