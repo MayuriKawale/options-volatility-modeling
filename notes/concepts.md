@@ -494,3 +494,24 @@ F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
 - Use SABR for ATM hedging and interpolation
 - Be cautious extrapolating to deep OTM strikes
 - Extensions like SABR-LV (Local-Stochastic Vol) address this
+
+## 29. Final Model Comparison Results
+
+### RMSE Results (SPY options, April 17 2026 expiry):
+- Black-Scholes RMSE: 5.9438 vol points
+- SABR RMSE:          0.8338 vol points  
+- SABR improvement:   85.97%
+
+### What RMSE means in practice:
+- 5.94 vol points BS error → significant mispricing
+- Example: pricing option assuming 19% vol when market 
+  implies 25% vol for low strikes
+- This leads to systematic underpricing of downside protection
+- 0.83 vol points SABR error → well within bid-ask spread
+  for most liquid options
+
+### Key takeaway:
+- Black-Scholes constant vol assumption is clearly inadequate
+- SABR stochastic vol captures market behavior much better
+- For production use, further refinements (SABR-LV) would 
+  improve the right side fit, but even basic SABR is a huge improvement over BS.
