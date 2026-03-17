@@ -144,3 +144,163 @@ Key columns in an options chain:
 - Markets price downside risk much higher than upside risk
 - This creates the volatility skew; higher implied vol for lower strikes
 - Black-Scholes cannot capture this with constant volatility assumption
+
+## 13. Continuous Compounding and Discounting
+
+### Where e^(rT) comes from:
+- Simple annual compounding: V = P × (1 + r)^T
+- Compounding n times per year: V = P × (1 + r/n)^(nT)
+- As n → infinity (continuous compounding): V = P × e^(rT)
+- e = 2.71828... is the natural limit of compounding infinitely frequently
+
+### Why finance uses continuous compounding:
+- Markets operate continuously, prices change every millisecond
+- Exponentials are mathematically clean and easy to work with
+- Consistent with stochastic calculus underlying Black-Scholes
+
+### Present Value and Discounting:
+- Future value: multiply by e^(rT), growing forward in time
+- Present value: multiply by e^(-rT), discounting back in time
+- K × e^(-rT) = what you'd need to invest today at rate r 
+  to have exactly K in T years
+
+### In Black-Scholes:
+- K × e^(-rT) is the present value of the strike price
+- We discount K because in an option contract, the strike is 
+  paid in the future, not today
+
+## 14. ATM Option Price Approximation
+
+For at-the-money options (S ≈ K), Black-Scholes simplifies to:
+```
+ATM Price ≈ 0.4 × S × sigma × sqrt(T)
+```
+
+Where:
+- S = current stock price
+- sigma = volatility
+- T = time to expiry in years
+- 0.4 ≈ 1/sqrt(2π) comes from simplifying N(d1) - N(d2) when S = K
+
+### Key Assumption:
+- We set r = 0 (risk-free rate = 0) to simplify the derivation
+- This makes e^(-rT) = e^0 = 1, eliminating the discounting term
+- In reality r > 0, which is why our actual Black-Scholes result 
+  ($18.55) is slightly higher than the approximation ($16.92)
+- A non-zero r adds value to calls because you save on not having 
+  to pay the strike price upfront, that money earns interest
+
+### Derivation intuition:
+- When S = K, log(S/K) = 0, simplifying d1 and d2
+- d1 = -d2 = 0.5 × sigma × sqrt(T)
+- N(d1) - N(d2) ≈ sigma × sqrt(T) × N'(0) = sigma × sqrt(T) / sqrt(2π)
+- Final result: Price ≈ S × sigma × sqrt(T) × 0.3989 ≈ 0.4 × S × sigma × sqrt(T)
+
+### Key insight:
+- Three main drivers of ATM option price: S, sigma, and sqrt(T)
+- Double the volatility → double the option price (approximately)
+- Useful as a quick sanity check on option prices
+- More accurate when r is small or T is short
+
+## 15. Implied Volatility Extraction via Root Finding
+
+### Core idea:
+- We want sigma such that BS(sigma) = market_price
+- Equivalent to finding root of: BS(sigma) - market_price = 0
+
+### Objective function:
+- Returns positive if BS price > market price (sigma too high)
+- Returns negative if BS price < market price (sigma too low)
+- Returns zero at the correct sigma (our answer)
+
+### brentq algorithm:
+- Finds root by repeatedly narrowing an interval [a, b]
+- Requires opposite signs at endpoints (one positive, one negative)
+- a = 1e-6 (near zero volatility lower bound)
+- b = 10.0 (1000% volatility upper bound, covers all real cases)
+- xtol = 1e-6 (stop when accurate to 0.0001%)
+- Converges very quickly, typically ~50 iterations
+
+### Why try/except:
+- brentq fails if market price is outside BS bounds
+- Happens for very deep ITM or OTM options
+- We return np.nan and drop these contracts later to avoid skewing our analysis with bad data
+
+## 16. Risk-Free Rate in Options Pricing
+- Standard choice: 3-month US Treasury bill rate
+- Considered risk-free, backed by US government
+- Should match the maturity closest to your options expiry
+- Changes over time, always look up current rate before analysis
+- As of March 16, 2026: 3.69%
+- Source: https://tradingeconomics.com/united-states/3-month-bill-yield
+
+## 17. Applying Functions Across DataFrame Rows
+
+### dataframe.apply(function, axis=1):
+- Applies a function to every row one by one
+- axis=1 means apply along rows (axis=0 would apply along columns)
+- Equivalent to a for loop but cleaner and faster
+- Each row is passed as input to the function
+
+### Lambda functions:
+- Compact way to define a single-use function without naming it
+- lambda row: expression is equivalent to def f(row): return expression
+- Preferred when function is only needed once
+
+### Example pattern:
+df['newColumn'] = df.apply(lambda row: some_function(row['col1'], row['col2']), axis=1)
+
+## 18. Finding ATM Option (Closest Strike to Current Price)
+
+### Pattern:
+atm_idx = (df['strike'] - current_price).abs().argsort()[:1]
+atm_vol = df.iloc[atm_idx]['impliedVol'].values[0]
+
+### Step by step:
+1. df['strike'] - current_price → distance of each strike from current price
+2. .abs() → absolute distance (remove negative signs)
+3. .argsort()[:1] → index of smallest distance (closest strike)
+4. .iloc[...] → select that row
+5. ['impliedVol'].values[0] → extract the implied vol value
+
+### Why we need ATM vol:
+- Used as reference point on volatility smile plot
+- Represents Black-Scholes' best single volatility estimate
+- All other strikes deviate from this, showing the smile
+
+## 19. Volatility Skew vs Volatility Smile
+
+### Volatility Smile:
+- Symmetric U-shape implies higher IV for both low and high strikes
+- Common in FX options markets
+
+### Volatility Skew (what we see in SPY):
+- Asymmetric means higher IV for low strikes, lower for high strikes
+- Also called "smirk" or "skew"
+- Common in equity markets
+- Driven by fear asymmetry when investors hedge against crashes 
+  but not against rallies
+
+### What ATM vol represents:
+- Black-Scholes uses one single constant vol for all strikes
+- ATM vol (19.22% for SPY Apr 17) is the best single estimate
+- But it overestimates vol for high strikes and underestimates 
+  for low strikes
+- SABR fixes this by fitting the entire skew shape
+
+## 20. Why Put-Call Parity Doesn't Hold Perfectly in Practice
+
+Theoretical put-call parity assumes:
+- No dividends
+- Constant risk-free rate
+- Simultaneous price quotes
+- No transaction costs
+
+In practice small violations occur because:
+- Stocks and ETFs pay dividends (not in basic BS formula)
+- Interest rate term structure is not flat
+- Bid/ask prices captured at different times
+- Transaction costs and market frictions exist
+
+Result: calls and puts give slightly different implied vols 
+for the same strike, this is normal and expected
