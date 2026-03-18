@@ -105,5 +105,6 @@ See `references/papers.md` for all papers and resources used.
   Corporate Liabilities. Journal of Political Economy, 81(3), 637-654.
 
 ## Author
-Mayuri Kawale
-Erdos Institute Quant Finance Boot Camp, Spring 2026
+Mayuri Kawale 
+
+For Erdos Institute Quant Finance Boot Camp, Spring 2026
