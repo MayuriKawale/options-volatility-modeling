@@ -283,7 +283,7 @@ atm_vol = df.iloc[atm_idx]['impliedVol'].values[0]
 
 ### What ATM vol represents:
 - Black-Scholes uses one single constant vol for all strikes
-- ATM vol (19.22% for SPY Apr 17) is the best single estimate
+- ATM vol (17.94% for SPY Apr 17) is the best single estimate
 - But it overestimates vol for high strikes and underestimates 
   for low strikes
 - SABR fixes this by fitting the entire skew shape
@@ -309,7 +309,7 @@ for the same strike, this is normal and expected
 
 ### Spot Price:
 - Current market price of the asset right now
-- SPY spot price = $669.03
+- SPY spot price = $670.79
 
 ### Forward Price:
 - Agreed price today for buying/selling asset at a future date
@@ -335,7 +335,7 @@ for the same strike, this is normal and expected
 - No need to handle them separately inside the formula
 
 ### Example for our project:
-F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
+F = 670.79 × e^((0.0369 - 0.013) × 0.0849) = $672.11
 
 ## 22. Hagan SABR Formula Structure
 
@@ -451,21 +451,40 @@ F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
 - Nu > 2.0 (unrealistically high vol of vol)
 - Loss not improving significantly between attempts
 
+## 26. Choosing the Calibration Region
+
+### Key criteria for a good calibration region:
+- Clean data with no duplicate vols for same strike
+- Smooth, monotonic vol progression
+- Centered around ATM (current price or forward price)
+- High liquidity → most actively traded strikes
+- Vol range manageable for SABR (typically within 10-15 vol points)
+
+### Why narrow ATM calibration is standard practice:
+- ATM region most important for trading and hedging
+- SABR fits near-ATM smile best by design
+- Deep OTM options introduce noise and extreme parameters
+- Model extrapolates to other strikes from ATM calibration
+
+### Tradeoff:
+- Narrow range → realistic parameters, good ATM fit
+- Wide range → boundary convergence, unrealistic parameters
+
 ## 27. SABR Alpha Initialization
 
 ### Common mistake:
-- Setting alpha ≈ ATM implied vol (e.g. 0.20)
+- Setting alpha ≈ ATM implied vol (e.g. 0.18)
 - This produces SABR vols much lower than market
 
 ### Why this happens:
 - With beta < 1, ATM SABR vol = alpha / F^(1-beta)
-- For beta=0.5 and F=670: sigma_ATM = alpha / sqrt(670) = alpha / 25.89
-- alpha=0.20 → sigma_ATM = 0.20/25.89 = 0.0077 (0.77%), this is way too low
+- For beta=0.5 and F=672.11: sigma_ATM = alpha / sqrt(672.11) = alpha / 25.93
+- alpha=0.18 → sigma_ATM = 0.18/25.93 = 0.0069 (0.69%), this is way too low
 
 ### Correct initialization:
 - Invert ATM formula: alpha = ATM_vol × F^(1-beta)
 - For beta=0.5: alpha = ATM_vol × sqrt(F)
-- Example: alpha = 0.20 × sqrt(670.39) = 5.178
+- Example: alpha = 0.1794 × sqrt(672.11) = 4.6450
 
 ### General rule:
 - Always initialize alpha = ATM_market_vol × F^(1-beta)
@@ -498,16 +517,16 @@ F = 669.03 × e^((0.0369 - 0.013) × 0.0849) = $670.36
 ## 29. Final Model Comparison Results
 
 ### RMSE Results (SPY options, April 17 2026 expiry):
-- Black-Scholes RMSE: 5.9438 vol points
-- SABR RMSE:          0.8338 vol points  
-- SABR improvement:   85.97%
+- Black-Scholes RMSE: 11.0263 vol points
+- SABR RMSE:          1.0170 vol points  
+- SABR improvement:   90.78%
 
 ### What RMSE means in practice:
-- 5.94 vol points BS error → significant mispricing
-- Example: pricing option assuming 19% vol when market 
-  implies 25% vol for low strikes
+- 11.03 vol points BS error → significant mispricing
+- Example: pricing option assuming 18% vol when market 
+  implies 29% vol for low strikes
 - This leads to systematic underpricing of downside protection
-- 0.83 vol points SABR error → well within bid-ask spread
+- 1.02 vol points SABR error → well within bid-ask spread
   for most liquid options
 
 ### Key takeaway:
