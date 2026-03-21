@@ -541,3 +541,218 @@ F = 670.79 × e^((0.0369 - 0.013) × 0.0849) = $672.11
 - Financial data changes daily - options prices, bid/ask quotes
 - yfinance returns current market data only, not historical options data
 - Rule: fetch → save → analyze, never fetch → analyze → save
+
+## 31. Black-Scholes Assumptions — Are They Realistic?
+
+### No jumps in asset price:
+- BS assumes continuous smooth price paths (Geometric Brownian Motion)
+- Reality: prices jump on earnings, macro events, geopolitical shocks
+- Jumps happen faster than any hedging strategy can react
+- This is one reason deep OTM puts are expensive — jump risk premium
+
+### Frictionless continuous markets:
+- BS assumes: no transaction costs, no bid-ask spreads, no taxes,
+  unlimited borrowing at risk-free rate, no short selling restrictions
+- None of these are true in practice
+
+### Why use BS despite unrealistic assumptions?
+- Deliberate simplification to get a closed-form mathematical solution
+- Like assuming frictionless surfaces in physics — useful approximation
+- Produces surprisingly good prices near ATM under normal conditions
+- Breaks down precisely when assumptions are most violated:
+  - During market stress
+  - For deep OTM options
+  - When jumps are likely
+
+## 32. SABR Model — Full Detail
+
+### Two stochastic equations:
+dF = α × F^β × dW₁       (asset price)
+dα = ν × α × dW₂         (volatility)
+dW₁ × dW₂ = ρ dt         (correlation)
+
+### Parameter intuition summary:
+- α (Alpha): height of smile → overall vol level
+- β (Beta): shape of backbone → fixed at 0.5
+- ρ (Rho): tilt of smile → negative for equities
+- ν (Nu): curvature of smile → vol of vol
+
+### How rho generates the skew:
+- ρ < 0 → price falls → vol rises (by correlation)
+- Lower strike options priced with higher vol
+- Produces downward skew seen in equity markets
+
+### Hagan formula structure:
+σ_SABR = backbone × skew × time_correction
+- backbone = α / F^(1-β)
+- skew = z / x(z), driven by rho
+- time_correction = 1 + (...) × T
+
+## 33. SABR Parameter Values — Detailed Intuition
+
+### Alpha (α) values:
+- **What it is:** The initial volatility level at time zero
+  - Yes → alpha IS the initial volatility, but NOT directly 
+    comparable to implied volatility when beta < 1
+  - With beta=0.5: actual ATM vol = alpha / sqrt(F)
+  - Example: alpha=4.751, F=672.11 → ATM vol = 4.751/25.93 = 18.3%
+
+- **High alpha:**
+  - Higher overall level of implied volatility
+  - Entire smile shifts upward
+  - Typical during market stress or high uncertainty periods
+  - Example: VIX spike → alpha increases
+
+- **Low alpha:**
+  - Lower overall level of implied volatility
+  - Entire smile shifts downward
+  - Typical during calm, low volatility markets
+  - Example: prolonged bull market → alpha decreases
+
+- **Alpha in our project:**
+  - α = 4.751 (with beta=0.5 and F=672.11)
+  - Equivalent ATM vol = 4.751 / sqrt(672.11) = 18.3%
+  - Consistent with our observed ATM market vol of 17.94% ✅
+
+- **Common mistake:**
+  - Setting alpha ≈ ATM vol directly (e.g. 0.18)
+  - With beta=0.5 this produces SABR vols of ~0.7% instead of ~18%
+  - Always initialize: alpha = ATM_vol × F^(1-beta)
+
+---
+
+### Beta (β) values:
+- **β = 1 (Lognormal backbone)**
+  - Vol is proportional to price level
+  - Similar behavior to Black-Scholes
+  - Used for equity indices and FX markets
+  - Price can never go negative
+
+- **β = 0.5 (Square root process)**
+  - Vol scales with square root of price
+  - Common default compromise
+  - Used in our project for SPY
+  - Widely accepted industry standard
+
+- **β = 0 (Normal backbone)**
+  - Vol is independent of price level
+  - Price CAN go negative (suitable for interest rates)
+  - Used in interest rate derivatives markets
+  - Became important after negative interest rates in Europe/Japan
+
+- **Why beta matters practically:**
+  - Higher beta → smile flattens as price increases
+  - Lower beta → smile steepens as price increases
+  - Choosing wrong beta → systematic mispricing across strikes
+  - Cannot be reliably calibrated from single day snapshot
+  - Fixed by convention based on asset class
+
+---
+
+### Rho (ρ) values:
+- **What it is:** Correlation between asset price movements 
+  and volatility movements
+
+- **ρ < 0 (Negative - typical for equities)**
+  - When price falls, volatility tends to rise
+  - Produces downward skew → higher vol for lower strikes
+  - Reflects fear asymmetry in equity markets
+  - Investors fear crashes more than rallies
+  - Example: SPY drops → VIX spikes → rho is negative
+
+- **ρ = 0 (Zero correlation)**
+  - Price and volatility move independently
+  - Produces symmetric smile (U-shape)
+  - Rare in practice for most asset classes
+
+- **ρ > 0 (Positive - typical for commodities)**
+  - When price rises, volatility also rises
+  - Produces upward skew → higher vol for higher strikes
+  - Reflects supply shock fears in commodity markets
+  - Example: oil supply disruption → price AND uncertainty both rise
+
+- **Rho in our project:**
+  - ρ = -0.768 → strongly negative
+  - Confirms strong fear asymmetry in SPY options market
+  - Consistent with typical equity market behavior
+  - Magnitude reflects current market stress level
+
+- **Rho bounds:**
+  - Must satisfy -1 < ρ < 1 (mathematical constraint)
+  - -1 = perfect negative correlation (never seen in practice)
+  - +1 = perfect positive correlation (never seen in practice)
+  - Typical equity range: -0.3 to -0.8
+
+---
+
+### Nu (ν) values:
+- **What it is:** Volatility of volatility → how much 
+  volatility itself can move around
+
+- **High nu (e.g. ν > 1.0)**
+  - Volatility itself is very uncertain
+  - Smile is more curved and pronounced
+  - Tails of distribution are fatter
+  - More expensive deep OTM options
+  - Typical during market stress or uncertainty
+
+- **Low nu (e.g. ν < 0.5)**
+  - Volatility is relatively stable
+  - Smile is flatter and less pronounced
+  - Distribution closer to lognormal
+  - Cheaper deep OTM options
+  - Typical in calm, stable markets
+
+- **Nu in our project:**
+  - ν = 2.901 → quite high
+  - Reflects significant uncertainty about future volatility
+  - SPY options market pricing in meaningful vol of vol risk
+  - Consistent with current market environment
+
+- **Relationship between nu and market conditions:**
+  - VIX rising → nu tends to increase
+  - Calm markets → nu tends to decrease
+  - Nu is sometimes called the "wings" parameter because
+    high nu makes the tails of the smile more pronounced
+
+---
+
+### Summary table:
+| Parameter | Controls | Our Value | Interpretation |
+|-----------|----------|-----------|----------------|
+| α (Alpha) | Overall vol level | 4.751 | ≈18.3% ATM vol |
+| β (Beta)  | Backbone shape | 0.500 (fixed) | Square root process |
+| ρ (Rho)   | Skew direction | -0.768 | Strong downward skew |
+| ν (Nu)    | Smile curvature | 2.901 | High vol of vol |
+
+## 34. Future Extensions
+
+### 1. SABR-LV (Local-Stochastic Volatility)
+- Combines SABR (stochastic vol) with Local Vol (vol as function of price and time)
+- Local Vol: σ = σ(S,t) i.e. deterministic function, fits any smile perfectly
+- SABR-LV fixes right-side misfit while keeping realistic vol dynamics
+- Used in production at major investment banks today
+
+### 2. Multi-Expiry Calibration
+- Our project: single expiry (April 17, 2026)
+- Full volatility surface: 3D object (strike × expiry × implied vol)
+- Production calibration fits SABR across ALL expiry dates simultaneously
+- Much harder — SABR parameters change across maturities
+- Requires smooth interpolation between expiry dates
+
+### 3. Variance Gamma Model
+- Different philosophical approach to the smile
+- Changes nature of time itself to random business time
+- Produces fat tails and skewness from non-Gaussian returns
+- SABR: smile from stochastic correlated vol
+- VG: smile from fundamentally non-Gaussian return distribution
+- Comparing both models on same data = natural project extension
+
+### 4. Delta Hedging Analysis
+- Delta = sensitivity of option price to asset price movement
+- Different models give different deltas
+- Test: simulate delta hedging strategy using BS delta vs SABR delta
+- Measure P&L of each hedging strategy over historical period
+- Lower hedging error = more accurate model in practice
+- SABR expected to win because it accounts for vol-price correlation
+- This is how traders evaluate models in production
