@@ -2,10 +2,10 @@
 ### Comparing Black-Scholes and SABR Models on Real Market Data
 
 ## Project Overview
-'''
-📊 **Quick Summary:** See `[PROJECT_SUMMARY.pdf](PROJECT_SUMMARY.pdf)` for a 
+```
+📊 **Quick Summary:** See [PROJECT_SUMMARY.pdf](PROJECT_SUMMARY.pdf) for a 
 concise visual overview of the project, methods, and key findings.
-'''
+```
 
 This project explores the limitations of the Black-Scholes options pricing 
 model and demonstrates how the SABR (Stochastic Alpha Beta Rho) stochastic 
